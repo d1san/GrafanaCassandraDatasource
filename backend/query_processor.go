@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/grafana/grafana-plugin-model/go/datasource"
@@ -17,11 +18,24 @@ func (qp *QueryProcessor) processRawMetricQuery(result *datasource.QueryResult, 
 	var timestamp time.Time
 	var value float64
 
+	var seriesName string
+	if len(iter.Columns()) > 2 {
+		valueColumnName := iter.Columns()[1].Name
+		if !strings.HasPrefix(valueColumnName, "cast") {
+			seriesName = valueColumnName
+		}
+	}
+
 	series := make(map[string]*datasource.TimeSeries)
 
 	for iter.Scan(&id, &value, &timestamp) {
 		if _, ok := series[id]; !ok {
-			series[id] = &datasource.TimeSeries{Name: id}
+			name := id
+			if seriesName != "" {
+				name = seriesName
+			}
+
+			series[id] = &datasource.TimeSeries{Name: name}
 		}
 
 		series[id].Points = append(series[id].Points, &datasource.Point{
